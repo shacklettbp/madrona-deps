@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 cmake_policy(VERSION 3.18)
 set(NAME madrona-deps-compile)
+
+if (MADRONA_MACOS)
+    set(CMAKE_OSX_ARCHITECTURES arm64;x86_64)
+endif()
+
 project(${NAME})
 
 include(FetchContent)
@@ -12,71 +17,6 @@ get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
 include(${PARENT_DIR}/cmake/sys-detect.cmake)
 
 include(versions.cmake)
-
-if (MADRONA_MACOS)
-    set(CMAKE_OSX_ARCHITECTURES arm64;x86_64)
-endif()
-
-set (LLVM_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/llvm")
-set (LLVM_INSTALL "${LLVM_PREFIX}/install")
-
-list(APPEND LLVM_ARGS
-    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-    "-DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL}"
-    "-DCMAKE_BUILD_TYPE=Release"
-    "-DLIBCXX_ENABLE_STATIC=OFF"
-    "-DLIBCXX_CXX_ABI=libcxxabi"
-    "-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON"
-    "-DLIBCXX_ENABLE_EXCEPTIONS=OFF"
-    "-DLIBCXX_ENABLE_ASSERTIONS=OFF"
-    "-DLIBCXX_ENABLE_RTTI=OFF"
-    "-DLIBCXX_INCLUDE_TESTS=OFF"
-    "-DLIBCXX_INCLUDE_BENCHMARKS=OFF"
-    "-DLIBCXX_ABI_NAMESPACE=__mad1"
-    "-DLIBCXX_USE_COMPILER_RT=ON"
-    "-DLIBCXX_HAS_ATOMIC_LIB=OFF" # This is an internal option but seems to work fine
-    "-DLIBCXXABI_ENABLE_EXCEPTIONS=OFF"
-    "-DLIBCXXABI_ENABLE_SHARED=OFF"
-    "-DLIBCXXABI_ENABLE_ASSERTIONS=OFF"
-    "-DLIBCXXABI_USE_LLVM_UNWINDER=ON"
-    "-DLIBCXXABI_USE_COMPILER_RT=ON"
-    "-DLIBCXXABI_ENABLE_STATIC_UNWINDER=ON"
-    "-DLIBUNWIND_ENABLE_ASSERTIONS=OFF"
-    "-DLIBUNWIND_ENABLE_SHARED=OFF"
-    "-DLIBUNWIND_USE_COMPILER_RT=ON"
-    "-DLLVM_ENABLE_RUNTIMES=libcxx$<SEMICOLON>libcxxabi$<SEMICOLON>libunwind"
-)
-
-if (MADRONA_MACOS)
-    list(APPEND LLVM_ARGS
-        "-DCMAKE_OSX_ARCHITECTURES=arm64$<SEMICOLON>x86_64"
-    )
-endif()
-
-ExternalProject_Add(llvm
-    URL https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz
-    URL_HASH SHA256=8b5fcb24b4128cf04df1b0b9410ce8b1a729cb3c544e6da885d234280dedeac6
-    PREFIX "${LLVM_PREFIX}"
-    INSTALL_DIR "${LLVM_INSTALL}"
-    CMAKE_ARGS ${LLVM_ARGS}
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-    SOURCE_SUBDIR runtimes
-    BUILD_COMMAND ${CMAKE_COMMAND} --build ${LLVM_PREFIX}/src/llvm-build --target cxx --target cxxabi --target unwind
-)
-
-install(DIRECTORY ${LLVM_INSTALL}/include/c++
-    DESTINATION libcxx/include/
-)
-
-install(DIRECTORY ${LLVM_INSTALL}/lib/
-    DESTINATION libcxx/lib
-    FILES_MATCHING
-        PATTERN *
-        PATTERN *abi* EXCLUDE
-        PATTERN *experimental* EXCLUDE
-        PATTERN *unwind* EXCLUDE
-)
 
 if (MADRONA_LINUX)
     set (SDL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/SDL")
@@ -95,7 +35,7 @@ if (MADRONA_LINUX)
         "-DSDL_OPENGLES=OFF"
         "-DSDL_DISKAUDIO=OFF"
         "-DSDL_X11=ON"
-        "-DSDL_OPENGL=OFF"
+        "-DSDL_OPENGL=ON"
         "-DSDL_VULKAN=ON"
     )
 

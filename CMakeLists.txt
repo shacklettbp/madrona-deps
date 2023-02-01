@@ -53,29 +53,6 @@ if (MADRONA_USE_BUNDLED)
 
     set(DEP_ROOT ${madronaprecompileddeps_SOURCE_DIR})
 
-    add_library(madrona_libcxx INTERFACE)
-    if (MADRONA_MACOS OR MADRONA_LINUX)
-        target_compile_options(madrona_libcxx INTERFACE
-            -nostdinc++ -nostdlib++
-        )
-        target_link_options(madrona_libcxx INTERFACE
-            -nostdlib++
-        )
-        target_include_directories(madrona_libcxx SYSTEM INTERFACE
-            $<BUILD_INTERFACE:${DEP_ROOT}/libcxx/include/c++/v1>
-        )
-
-        find_library(MADRONA_BUNDLED_LIBCXX c++
-            PATHS "${DEP_ROOT}/libcxx/lib"
-            REQUIRED
-            NO_DEFAULT_PATH
-        )
-
-        target_link_libraries(madrona_libcxx INTERFACE
-            ${MADRONA_BUNDLED_LIBCXX}
-        )
-    endif()
-
     if (MADRONA_LINUX)
         find_package(SDL2
             PATHS "${DEP_ROOT}/SDL"
@@ -128,8 +105,6 @@ if (MADRONA_USE_BUNDLED)
     endif ()
     
 else()
-    add_library(madrona_libcxx INTERFACE)
-
     if (MADRONA_LINUX)
         find_package(SDL2 REQUIRED)
     endif()
@@ -170,16 +145,6 @@ else()
         )
     endif()
 endif()
-
-# FIXME proper install support
-install(TARGETS madrona_libcxx
-    EXPORT madronaLibCXXTarget
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}
-)
-
-install(EXPORT madronaLibCXXTarget
-    DESTINATION ${CMAKE_INSTALL_PREFIX}
-)
 
 if (MADRONA_LINUX)
     add_library(madrona_sdl2 INTERFACE)
