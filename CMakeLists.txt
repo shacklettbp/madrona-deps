@@ -99,7 +99,7 @@ if (MADRONA_USE_BUNDLED)
         set(MADRONA_SPIRV_CROSS_INCLUDE_DIR "${DEP_ROOT}/spirv_cross/include")
 
         add_library(madrona_metal_cpp INTERFACE)
-        target_include_directories(madrona_metal_cpp
+        target_include_directories(madrona_metal_cpp SYSTEM
             INTERFACE "${DEP_ROOT}/metal-cpp/include"
         )
     endif ()
