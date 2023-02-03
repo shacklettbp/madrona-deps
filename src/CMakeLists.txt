@@ -173,4 +173,23 @@ if (MADRONA_MACOS)
         DESTINATION metal-cpp
     )
 
+    # Want metal-cpp-extensions from this example
+    # (why is it not distributed separately??)
+    FetchContent_Declare(metal-cpp-extensions
+        URL "https://developer.apple.com/metal/LearnMetalCPP.zip"
+        URL_HASH SHA256=a709f3c0b532d5b9e3a5db3da3a35f3b783af27eb50f23a711115c02f86a256d
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+    )
+    FetchContent_MakeAvailable(metal-cpp-extensions)
+
+    set(metal_cpp_ext_dir "${metal-cpp-extensions_SOURCE_DIR}/metal-cpp-extensions")
+    install(DIRECTORY "${metal_cpp_ext_dir}/AppKit"
+        DESTINATION metal-cpp-extensions/include
+    )
+    install(DIRECTORY "${metal_cpp_ext_dir}/MetalKit"
+        DESTINATION metal-cpp-extensions/include
+    )
+
 endif ()

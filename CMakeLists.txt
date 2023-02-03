@@ -101,6 +101,7 @@ if (MADRONA_USE_BUNDLED)
         add_library(madrona_metal_cpp INTERFACE)
         target_include_directories(madrona_metal_cpp SYSTEM
             INTERFACE "${DEP_ROOT}/metal-cpp/include"
+            INTERFACE "${DEP_ROOT}/metal-cpp-extensions/include"
         )
     endif ()
     
@@ -139,9 +140,14 @@ else()
             message(FATAL_ERROR "Must define MADRONA_METAL_CPP_DIR on Mac when not using bundled dependencies")
         endif()
 
+        if (NOT DEFINED MADRONA_METAL_CPP_EXT_DIR)
+            message(FATAL_ERROR "Must define MADRONA_METAL_CPP_EXT_DIR (from LearnMetalCPP example) on Mac when not using bundled dependencies")
+        endif()
+
         add_library(madrona_metal_cpp INTERFACE)
         target_include_directories(madrona_metal_cpp INTERFACE
             ${MADRONA_METAL_CPP_DIR}
+            ${MADRONA_METAL_CPP_EXT_DIR}
         )
     endif()
 endif()
@@ -181,10 +187,22 @@ if (MADRONA_MACOS)
         REQUIRED
     )
 
+    find_library(appkit_framework
+        AppKit
+        REQUIRED
+    )
+
+    find_library(metalkit_framework
+        MetalKit
+        REQUIRED
+    )
+
     add_library(madrona_metal_libs INTERFACE)
     target_link_libraries(madrona_metal_libs INTERFACE
         "${foundation_framework}"
         "${quartzcore_framework}"
         "${metal_framework}"
+        "${appkit_framework}"
+        "${metalkit_framework}"
     )
 endif ()
