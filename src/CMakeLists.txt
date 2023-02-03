@@ -1,20 +1,19 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 cmake_policy(VERSION 3.18)
-set(NAME madrona-deps-compile)
+get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+include(${PARENT_DIR}/cmake/sys-detect.cmake)
 
 if (MADRONA_MACOS)
-    set(CMAKE_OSX_ARCHITECTURES arm64;x86_64)
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
 
+set(NAME madrona-deps-compile)
 project(${NAME})
 
 include(FetchContent)
 include(ExternalProject)
 
 find_package(Python 3.6 COMPONENTS Interpreter)
-
-get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
-include(${PARENT_DIR}/cmake/sys-detect.cmake)
 
 include(versions.cmake)
 
