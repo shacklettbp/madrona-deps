@@ -165,4 +165,26 @@ if (MADRONA_MACOS)
     target_include_directories(madrona_spirv_cross
         INTERFACE "${MADRONA_SPIRV_CROSS_INCLUDE_DIR}"
     )
+
+    find_library(foundation_framework
+        Foundation
+        REQUIRED
+    )
+
+    find_library(quartzcore_framework
+        QuartzCore
+        REQUIRED
+    )
+
+    find_library(metal_framework
+        Metal
+        REQUIRED
+    )
+
+    add_library(madrona_metal_libs INTERFACE)
+    target_link_libraries(madrona_metal_libs INTERFACE
+        "${foundation_framework}"
+        "${quartzcore_framework}"
+        "${metal_framework}"
+    )
 endif ()
