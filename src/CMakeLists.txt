@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 cmake_policy(VERSION 3.18)
-get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
-include(${PARENT_DIR}/cmake/sys-detect.cmake)
 
-if (MADRONA_MACOS)
+if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
 
@@ -12,6 +10,9 @@ project(${NAME})
 
 include(FetchContent)
 include(ExternalProject)
+
+get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+include(${PARENT_DIR}/cmake/sys-detect.cmake)
 
 find_package(Python 3.6 COMPONENTS Interpreter)
 
