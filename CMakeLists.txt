@@ -39,13 +39,13 @@ if (MADRONA_USE_BUNDLED)
         endif()
     endif()
 
-    set(DEPS_URL "https://github.com/shacklettbp/madrona-deps/releases/download/${MADRONA_DEPS_VERSION}/madrona-deps-${MADRONA_DEPS_VERSION}-${DEPS_OS_NAME}.tar.zst")
+    set(DEPS_URL "https://github.com/shacklettbp/madrona-deps/releases/download/${MADRONA_DEPS_VERSION}/madrona-deps-${MADRONA_DEPS_VERSION}-${DEPS_OS_NAME}.tar.xz")
 
     FetchContent_Declare(MadronaPrecompiledDeps
         URL ${DEPS_URL}
         URL_HASH SHA256=${MADRONA_DEPS_HASH}
         DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/download"
-        DOWNLOAD_NAME cur.tar # Can't name it .tar.zst or CMake will ignore
+        DOWNLOAD_NAME cur.tar # Can't name it .tar.xz or CMake will ignore
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
 
