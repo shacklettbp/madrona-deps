@@ -89,7 +89,7 @@ ExternalProject_Add(VulkanHeaders
 )
 
 install(DIRECTORY ${VK_HDRS_INSTALL}/include/
-    DESTINATION vk_hdrs/
+    DESTINATION vk_hdrs/include/
 )
 
 set(VK_LOADER_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_loader")
