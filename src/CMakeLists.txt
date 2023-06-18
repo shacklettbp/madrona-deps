@@ -88,8 +88,8 @@ ExternalProject_Add(VulkanHeaders
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
-install(DIRECTORY ${VK_HDRS_INSTALL}/include/vulkan
-    DESTINATION vk_hdrs/include/
+install(DIRECTORY ${VK_HDRS_INSTALL}/include/
+    DESTINATION vk_hdrs/
 )
 
 set(VK_LOADER_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_loader")
@@ -123,7 +123,6 @@ file(GLOB vk_loader_libs ${VK_LOADER_INSTALL}/lib/libvulkan*)
 
 install(FILES ${vk_loader_libs}
     DESTINATION vk_loader/lib
-    USE_SOURCE_PERMISSIONS
 )
 
 if (MADRONA_MACOS)
@@ -147,7 +146,6 @@ if (MADRONA_MACOS)
 
     install(FILES ${moltenvk_libs}
         DESTINATION moltenvk/lib/
-        USE_SOURCE_PERMISSIONS
     )
 
     install(DIRECTORY ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/include/MoltenVK
