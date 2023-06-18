@@ -62,49 +62,50 @@ if (MADRONA_USE_BUNDLED)
         )
     endif()
 
-    if (MADRONA_LINUX OR MADRONA_WINDOWS)
-        add_library(madrona_vk_hdrs INTERFACE)
-        target_include_directories(madrona_vk_hdrs
-            INTERFACE "${DEP_ROOT}/vk_sdk/include"
-        )
-
-        find_library(vk_loader_loc vulkan
-            PATHS "${DEP_ROOT}/vk_sdk/lib"
-            REQUIRED
-            NO_DEFAULT_PATH
-        )
-        
-        add_library(madrona_vk_loader SHARED IMPORTED)
-        set_target_properties(madrona_vk_loader PROPERTIES IMPORTED_LOCATION "${vk_loader_loc}")
-
-        add_library(madrona_vk_layers INTERFACE)
-        target_compile_definitions(madrona_vk_layers INTERFACE
-            "-DMADRONA_VK_LAYERS_DIR=${DEP_ROOT}/vk_sdk/layers"
-        )
-    endif()
-    
-    find_library(MADRONA_DXC_LIB dxcompiler
-        PATHS "${DEP_ROOT}/dxc/lib"
+    find_library(vk_loader_src_loc libvulkan.so libvulkan.dll libvulkan.dylib
+        PATHS "${DEP_ROOT}/vk_loader/lib"
         REQUIRED
         NO_DEFAULT_PATH
     )
-    set(MADRONA_DXC_INCLUDE_DIR "${DEP_ROOT}/dxc/include")
+
+    cmake_path(GET vk_loader_src_loc FILENAME vk_loader_name)
+    set(MADRONA_BUNDLED_VK_LOADER "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${vk_loader_name}")
+
+    add_custom_command(
+        OUTPUT ${MADRONA_BUNDLED_VK_LOADER}
+        DEPENDS ${vk_loader_src_loc}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${vk_loader_src_loc}  ${MADRONA_BUNDLED_VK_LOADER}
+    )
+
+    add_library(madrona_vk_hdrs INTERFACE)
+    target_include_directories(madrona_vk_hdrs
+        INTERFACE "${DEP_ROOT}/vk_hdrs/include"
+    )
+
+    add_dependencies(madrona_vk_hdrs ${MADRONA_BUNDLED_VK_LOADER})
     
     if (MADRONA_MACOS OR MADRONA_IOS)
-        find_library(MADRONA_SPIRV_CROSS_LIB spirv-cross-c-shared
-            PATHS "${DEP_ROOT}/spirv_cross/lib"
-            REQUIRED
-            NO_DEFAULT_PATH
+        add_library(madrona_moltenvk INTERFACE)
+        target_include_directories(madrona_moltenvk SYSTEM INTERFACE
+            "${DEP_ROOT}/moltenvk/include")
+
+        set(MOLTENVK_DYLIB_NAME "libMoltenVK.dylib")
+        set(MOLTENVK_SRC_LOC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_DYLIB_NAME}")
+        set(MOLTENVK_BUNDLED_LIB "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${MOLTENVK_DYLIB_NAME}")
+        add_custom_command(
+            OUTPUT "${MOLTENVK_BUNDLED_LIB}"
+            DEPENDS "${MOLTENVK_SRC_LOC}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MOLTENVK_SRC_LOC}" "${MOLTENVK_BUNDLED_LIB}"
         )
-        set(MADRONA_SPIRV_CROSS_INCLUDE_DIR "${DEP_ROOT}/spirv_cross/include")
+
+        add_dependencies(madrona_moltenvk "${MOLTENVK_BUNDLED_LIB}")
 
         add_library(madrona_metal_cpp INTERFACE)
-        target_include_directories(madrona_metal_cpp SYSTEM
-            INTERFACE "${DEP_ROOT}/metal-cpp/include"
-            INTERFACE "${DEP_ROOT}/metal-cpp-extensions/include"
+        target_include_directories(madrona_metal_cpp SYSTEM INTERFACE
+            "${DEP_ROOT}/metal-cpp/include"
+            "${DEP_ROOT}/metal-cpp-extensions/include"
         )
     endif ()
-    
 else()
     if (MADRONA_LINUX)
         find_package(SDL2 REQUIRED)
@@ -125,17 +126,7 @@ else()
         )
     endif()
 
-    find_library(MADRONA_DXC_LIB dxcompiler REQUIRED
-        HINTS "$ENV{VULKAN_SDK}/lib")
-    find_path(MADRONA_DXC_INCLUDE_DIR dxc/dxcapi.h REQUIRED
-        HINTS "$ENV{VULKAN_SDK}/include")
-
     if (MADRONA_MACOS OR MADRONA_IOS)
-        find_library(MADRONA_SPIRV_CROSS_LIB spirv-cross-c-shared REQUIRED
-            HINTS "$ENV{VULKAN_SDK}/lib")
-        find_path(MADRONA_SPIRV_CROSS_INCLUDE_DIR spirv_cross/spirv_cross.hpp REQUIRED
-            HINTS "$ENV{VULKAN_SDK}/include")
-
         if (NOT DEFINED MADRONA_METAL_CPP_DIR)
             message(FATAL_ERROR "Must define MADRONA_METAL_CPP_DIR on Mac when not using bundled dependencies")
         endif()
@@ -150,6 +141,8 @@ else()
             ${MADRONA_METAL_CPP_EXT_DIR}
         )
     endif()
+
+    add_custom_target(madrona_vk_loader_prepare)
 endif()
 
 if (MADRONA_LINUX)
@@ -159,19 +152,7 @@ if (MADRONA_LINUX)
     )
 endif()
 
-add_library(madrona_dxc SHARED IMPORTED GLOBAL)
-set_target_properties(madrona_dxc PROPERTIES IMPORTED_LOCATION "${MADRONA_DXC_LIB}")
-target_include_directories(madrona_dxc
-    INTERFACE "${MADRONA_DXC_INCLUDE_DIR}"
-)
-
 if (MADRONA_MACOS)
-    add_library(madrona_spirv_cross SHARED IMPORTED GLOBAL)
-    set_target_properties(madrona_spirv_cross PROPERTIES IMPORTED_LOCATION "${MADRONA_SPIRV_CROSS_LIB}")
-    target_include_directories(madrona_spirv_cross
-        INTERFACE "${MADRONA_SPIRV_CROSS_INCLUDE_DIR}"
-    )
-
     find_library(foundation_framework
         Foundation
         REQUIRED

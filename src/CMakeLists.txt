@@ -3,6 +3,7 @@ cmake_policy(VERSION 3.18)
 
 if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.2")
 endif()
 
 set(NAME madrona-deps-compile)
@@ -48,7 +49,7 @@ if (MADRONA_LINUX)
         CMAKE_ARGS ${SDL_ARGS}
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
-    
+
     install(DIRECTORY "${SDL_INSTALL}/include/SDL2"
         DESTINATION SDL/include
     )
@@ -61,96 +62,96 @@ if (MADRONA_LINUX)
     )
 endif()
 
-# Vulkan SDK fetch. All platforms use the Vulkan SDK at least for the pre-compiled copy of DXC
-if (MADRONA_LINUX)
-    set(VULKAN_URL "https://sdk.lunarg.com/sdk/download/${VULKAN_SDK_VERSION}/linux/vulkansdk-linux-x86_64-${VULKAN_SDK_VERSION}.tar.gz")
-    set(VULKAN_HASH "92a44158004a05fd3fba18963eebe3698442c93488e94c126361851a3ea002cf")
-    set(VULKAN_NO_EXTRACT OFF)
-    set(VULKAN_EXTRACT_ARG DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-elseif (MADRONA_MACOS)
-    set(VULKAN_DMG_NAME "vulkansdk-macos-${VULKAN_SDK_VERSION}.dmg")
-    set(VULKAN_URL "https://sdk.lunarg.com/sdk/download/${VULKAN_SDK_VERSION}/mac/${VULKAN_DMG_NAME}")
-    set(VULKAN_HASH "18b138c3fd91d5d457ec60bf264296b04332715bb379babc90c6e9c4fa45086c")
-    set(VULKAN_NO_EXTRACT ON)
-    set(VULKAN_EXTRACT_ARG)
-endif()
+set (VK_HDRS_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_hdrs")
+set (VK_HDRS_INSTALL "${VK_HDRS_PREFIX}/install")
 
-FetchContent_Declare(VulkanSDK
-    URL ${VULKAN_URL}
-    URL_HASH SHA256=${VULKAN_HASH}
-    DOWNLOAD_NO_EXTRACT ${VULKAN_NO_EXTRACT}
-    ${VULKAN_EXTRACT_ARG}
+list(APPEND VK_HDRS_ARGS
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_INSTALL_PREFIX=${VK_HDRS_INSTALL}"
+    "-DCMAKE_BUILD_TYPE=Release"
 )
 
-FetchContent_MakeAvailable(VulkanSDK)
-
-if (MADRONA_LINUX)
-    set(VULKAN_SDK_ROOT "${vulkansdk_SOURCE_DIR}/x86_64")
-elseif (MADRONA_MACOS)
-    execute_process(
-        COMMAND "${Python_EXECUTABLE}" "${PARENT_DIR}/scripts/extract_mac_vulkan_sdk.py" "${vulkansdk_SOURCE_DIR}/${VULKAN_DMG_NAME}" "${VULKAN_HASH}" "${vulkansdk_SOURCE_DIR}" "${sevenzip_SOURCE_DIR}/7zz"
-        COMMAND_ERROR_IS_FATAL ANY
-    )
-
-    set(VULKAN_SDK_ROOT "${vulkansdk_SOURCE_DIR}/macOS")
-endif()
-
-if (MADRONA_LINUX OR MADRONA_WINDOWS)
-    install(DIRECTORY ${VULKAN_SDK_ROOT}/include/vulkan
-        DESTINATION vk_sdk/include/
-    )
-
-    file(GLOB vk_loader_libs ${VULKAN_SDK_ROOT}/lib/libvulkan*)
-
-    install(FILES ${vk_loader_libs}
-        DESTINATION vk_sdk/lib
-    )
-
-    file(GLOB vk_layer_libs ${VULKAN_SDK_ROOT}/lib/libVkLayer*)
-
-    install(FILES ${vk_layer_libs}
-        DESTINATION vk_sdk/layers/lib/
-    )
-
-    foreach (layer_lib ${vk_layer_libs})
-        get_filename_component(layer_file "${layer_lib}" NAME)
-        install(CODE "execute_process(COMMAND strip ${CMAKE_INSTALL_PREFIX}/vk_sdk/layers/lib/${layer_file})")
-    endforeach()
-
-    install(DIRECTORY ${VULKAN_SDK_ROOT}/etc/vulkan/explicit_layer.d
-        DESTINATION vk_sdk/layers/
-    )
-
-    install(DIRECTORY ${VULKAN_SDK_ROOT}/include/spirv-tools
-        DESTINATION spirv_tools/include/
-    )
-
-    file(GLOB spirv_tools_libs ${VULKAN_SDK_ROOT}/lib/*SPIRV-Tools-shared*)
-    
-    install(FILES ${spirv_tools_libs}
-        DESTINATION spirv_tools/lib
+if (MADRONA_MACOS OR MADRONA_IOS)
+    list(APPEND VK_HDRS_ARGS
+        -DCMAKE_OSX_ARCHITECTURES=arm64$<SEMICOLON>x86_64
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=11.2
     )
 endif()
 
-install(DIRECTORY ${VULKAN_SDK_ROOT}/include/dxc
-    DESTINATION dxc/include/
+ExternalProject_Add(VulkanHeaders
+    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+    GIT_TAG sdk-${VULKAN_HEADER_VERSION}
+    PREFIX "${VK_HDRS_PREFIX}"
+    INSTALL_DIR "${VK_HDRS_INSTALL}"
+    CMAKE_ARGS ${VK_HDRS_ARGS}
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
-file(GLOB dxc_libs ${VULKAN_SDK_ROOT}/lib/*dxcompiler*)
+install(DIRECTORY ${VK_HDRS_INSTALL}/include/vulkan
+    DESTINATION vk_hdrs/include/
+)
 
-install(FILES ${dxc_libs}
-    DESTINATION dxc/lib
+set(VK_LOADER_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_loader")
+set(VK_LOADER_INSTALL "${VK_LOADER_PREFIX}/install")
+
+list(APPEND VK_LOADER_ARGS
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_INSTALL_PREFIX=${VK_LOADER_INSTALL}"
+    "-DCMAKE_BUILD_TYPE=Release"
+    "-DUPDATE_DEPS=ON"
+)
+
+if (MADRONA_MACOS OR MADRONA_IOS)
+    list(APPEND VK_LOADER_ARGS
+        -DCMAKE_OSX_ARCHITECTURES=arm64$<SEMICOLON>x86_64
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=11.2
+    )
+endif()
+
+ExternalProject_Add(VulkanLoader
+    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Loader.git
+    GIT_TAG sdk-${VULKAN_LOADER_VERSION}
+    PREFIX "${VK_LOADER_PREFIX}"
+    INSTALL_DIR "${VK_LOADER_INSTALL}"
+    CMAKE_ARGS ${VK_LOADER_ARGS}
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
+file(GLOB vk_loader_libs ${VK_LOADER_INSTALL}/lib/libvulkan*)
+
+install(FILES ${vk_loader_libs}
+    DESTINATION vk_loader/lib
+    USE_SOURCE_PERMISSIONS
 )
 
 if (MADRONA_MACOS)
-    install(DIRECTORY ${VULKAN_SDK_ROOT}/include/spirv_cross
-        DESTINATION spirv_cross/include/
+    set (MOLTENVK_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/moltenvk")
+
+    ExternalProject_Add(MoltenVK
+        GIT_REPOSITORY https://github.com/KhronosGroup/MoltenVK.git
+        GIT_TAG ${MOLTENVK_VERSION}
+        PREFIX ${MOLTENVK_PREFIX}
+        STAMP_DIR ${MOLTENVK_PREFIX}/stamps
+        SOURCE_DIR ${MOLTENVK_PREFIX}/repo
+        BINARY_DIR ${MOLTENVK_PREFIX}/repo
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND
+            ./fetchDependencies --macos
+            COMMAND make MVK_CONFIG_LOG_LEVEL=1 MVK_HIDE_VULKAN_SYMBOLS=1 macos
+        INSTALL_COMMAND ""
     )
 
-    file(GLOB spirv_cross_libs ${VULKAN_SDK_ROOT}/lib/*spirv-cross-c-shared*)
-    
-    install(FILES ${spirv_cross_libs}
-        DESTINATION spirv_cross/lib
+    file(GLOB moltenvk_libs ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/dylib/macOS/*)
+
+    install(FILES ${moltenvk_libs}
+        DESTINATION moltenvk/lib/
+        USE_SOURCE_PERMISSIONS
+    )
+
+    install(DIRECTORY ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/include/MoltenVK
+        DESTINATION moltenvk/include/
     )
 
     FetchContent_Declare(metal-cpp
