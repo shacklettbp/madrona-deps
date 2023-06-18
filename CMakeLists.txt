@@ -77,18 +77,18 @@ if (MADRONA_USE_BUNDLED)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${vk_loader_src_loc}  ${MADRONA_BUNDLED_VK_LOADER}
     )
 
+    add_custom_target(madrona_vk_loader
+        DEPENDS ${MADRONA_BUNDLED_VK_LOADER}
+    )
+
     add_library(madrona_vk_hdrs INTERFACE)
     target_include_directories(madrona_vk_hdrs
         INTERFACE "${DEP_ROOT}/vk_hdrs/include"
     )
 
-    add_dependencies(madrona_vk_hdrs ${MADRONA_BUNDLED_VK_LOADER})
+    add_dependencies(madrona_vk_hdrs madrona_vk_loader)
     
     if (MADRONA_MACOS OR MADRONA_IOS)
-        add_library(madrona_moltenvk INTERFACE)
-        target_include_directories(madrona_moltenvk SYSTEM INTERFACE
-            "${DEP_ROOT}/moltenvk/include")
-
         set(MOLTENVK_DYLIB_NAME "libMoltenVK.dylib")
         set(MOLTENVK_SRC_LOC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_DYLIB_NAME}")
         set(MOLTENVK_BUNDLED_LIB "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${MOLTENVK_DYLIB_NAME}")
@@ -98,7 +98,14 @@ if (MADRONA_USE_BUNDLED)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MOLTENVK_SRC_LOC}" "${MOLTENVK_BUNDLED_LIB}"
         )
 
-        add_dependencies(madrona_moltenvk "${MOLTENVK_BUNDLED_LIB}")
+        add_custom_target(madrona_moltenvk_lib
+            DEPENDS "${MOLTENVK_BUNDLED_LIB}")
+
+        add_library(madrona_moltenvk INTERFACE)
+        target_include_directories(madrona_moltenvk SYSTEM INTERFACE
+            "${DEP_ROOT}/moltenvk/include")
+
+        add_dependencies(madrona_moltenvk madrona_moltenvk_lib)
 
         add_library(madrona_metal_cpp INTERFACE)
         target_include_directories(madrona_metal_cpp SYSTEM INTERFACE
