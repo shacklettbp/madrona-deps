@@ -119,10 +119,11 @@ ExternalProject_Add(VulkanLoader
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
-file(GLOB vk_loader_libs ${VK_LOADER_INSTALL}/lib/libvulkan*)
-
-install(FILES ${vk_loader_libs}
+install(DIRECTORY ${VK_LOADER_INSTALL}/lib/
     DESTINATION vk_loader/lib
+    FILES_MATCHING
+        PATTERN *
+        PATTERN *pkgconfig* EXCLUDE
 )
 
 if (MADRONA_MACOS)
@@ -142,9 +143,7 @@ if (MADRONA_MACOS)
         INSTALL_COMMAND ""
     )
 
-    file(GLOB moltenvk_libs ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/dylib/macOS/*)
-
-    install(FILES ${moltenvk_libs}
+    install(DIRECTORY ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/dylib/macOS/
         DESTINATION moltenvk/lib/
     )
 

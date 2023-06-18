@@ -98,8 +98,19 @@ if (MADRONA_USE_BUNDLED)
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MOLTENVK_SRC_LOC}" "${MOLTENVK_BUNDLED_LIB}"
         )
 
-        add_custom_target(madrona_moltenvk_lib
-            DEPENDS "${MOLTENVK_BUNDLED_LIB}")
+        set(MOLTENVK_ICD_NAME "MoltenVK_icd.json")
+        set(MOLTENVK_ICD_SRC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_ICD_NAME}")
+        set(MOLTENVK_ICD_DST "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${MOLTENVK_ICD_NAME}")
+        add_custom_command(
+            OUTPUT "${MOLTENVK_ICD_DST}"
+            DEPENDS "${MOLTENVK_ICD_SRC}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MOLTENVK_ICD_SRC}" "${MOLTENVK_ICD_DST}"
+        )
+
+        add_custom_target(madrona_moltenvk_lib DEPENDS
+            "${MOLTENVK_BUNDLED_LIB}"
+            "${MOLTENVK_ICD_DST}"
+        )
 
         add_library(madrona_moltenvk INTERFACE)
         target_include_directories(madrona_moltenvk SYSTEM INTERFACE
