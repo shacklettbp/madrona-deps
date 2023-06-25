@@ -67,11 +67,21 @@ if (MADRONA_USE_BUNDLED)
         )
     endif()
 
-    find_library(vk_loader_src_loc libvulkan.so.1 vulkan-1.dll libvulkan.1.dylib
-        PATHS "${DEP_ROOT}/vk_loader/lib"
-        REQUIRED
-        NO_DEFAULT_PATH
-    )
+    if (MADRONA_WINDOWS)
+        find_file(vk_loader_src_loc
+            NAMES vulkan-1.dll
+            PATHS "${DEP_ROOT}/vk_loader/lib"
+            REQUIRED
+            NO_DEFAULT_PATH
+        )
+    else()
+        find_library(vk_loader_src_loc
+            NAMES libvulkan.so.1 libvulkan.1.dylib
+            PATHS "${DEP_ROOT}/vk_loader/lib"
+            REQUIRED
+            NO_DEFAULT_PATH
+        )
+    endif()
 
     cmake_path(GET vk_loader_src_loc FILENAME vk_loader_name)
     set(MADRONA_BUNDLED_VK_LOADER "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${vk_loader_name}")
