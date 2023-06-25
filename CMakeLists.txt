@@ -67,7 +67,7 @@ if (MADRONA_USE_BUNDLED)
         )
     endif()
 
-    find_library(vk_loader_src_loc libvulkan.so.1 libvulkan-1.dll libvulkan.1.dylib
+    find_library(vk_loader_src_loc libvulkan.so.1 vulkan-1.dll libvulkan.1.dylib
         PATHS "${DEP_ROOT}/vk_loader/lib"
         REQUIRED
         NO_DEFAULT_PATH
