@@ -70,6 +70,7 @@ list(APPEND VK_HDRS_ARGS
     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_INSTALL_PREFIX=${VK_HDRS_INSTALL}"
     "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_CONFIGURATION_TYPES=Release"
 )
 
 if (MADRONA_MACOS OR MADRONA_IOS)
@@ -100,6 +101,7 @@ list(APPEND VK_LOADER_ARGS
     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_INSTALL_PREFIX=${VK_LOADER_INSTALL}"
     "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_CONFIGURATION_TYPES=Release"
     "-DUPDATE_DEPS=ON"
 )
 
@@ -119,12 +121,20 @@ ExternalProject_Add(VulkanLoader
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
-install(DIRECTORY ${VK_LOADER_INSTALL}/lib/
-    DESTINATION vk_loader/lib
-    FILES_MATCHING
-        PATTERN *
-        PATTERN *pkgconfig* EXCLUDE
-)
+if (MADRONA_WINDOWS)
+    install(DIRECTORY ${VK_LOADER_INSTALL}/bin/
+        DESTINATION vk_loader/lib
+        FILES_MATCHING
+            PATTERN *dll
+    )
+else()
+    install(DIRECTORY ${VK_LOADER_INSTALL}/lib/
+        DESTINATION vk_loader/lib
+        FILES_MATCHING
+            PATTERN *
+            PATTERN *pkgconfig* EXCLUDE
+    )
+endif()
 
 if (MADRONA_MACOS)
     set (MOLTENVK_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/moltenvk")
