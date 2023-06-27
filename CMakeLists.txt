@@ -102,6 +102,55 @@ if (MADRONA_USE_BUNDLED)
     )
 
     add_dependencies(madrona_vk_hdrs madrona_vk_loader)
+
+    # Setup DXC
+    
+    if (MADRONA_WINDOWS)
+        find_file(MADRONA_BUNDLED_LIBDXC dxcompiler.dll
+            PATHS "${DEP_ROOT}/dxc/bin"
+            REQUIRED
+            NO_DEFAULT_PATH
+        )
+
+        find_library(MADRONA_BUNDLED_IMPLIBDXC dxcompiler.lib
+            PATHS "${DEP_ROOT}/dxc/lib"
+            REQUIRED
+            NO_DEFAULT_PATH
+        )
+    else()
+        find_library(MADRONA_BUNDLED_LIBDXC libdxcompiler.so libdxcompiler.dylib
+            PATHS "${DEP_ROOT}/dxc/lib"
+            REQUIRED
+            NO_DEFAULT_PATH
+        )
+    endif()
+    
+    cmake_path(GET MADRONA_BUNDLED_LIBDXC FILENAME MADRONA_LIBDXC_NAME)
+    set(MADRONA_LIBDXC_BUILDLOC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${MADRONA_LIBDXC_NAME}")
+    
+    add_custom_command(
+        OUTPUT ${MADRONA_LIBDXC_BUILDLOC}
+        DEPENDS ${MADRONA_BUNDLED_LIBDXC}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MADRONA_BUNDLED_LIBDXC}  ${MADRONA_LIBDXC_BUILDLOC}
+    )
+    
+    add_custom_target(madrona_libdxc_shlib
+        DEPENDS ${MADRONA_LIBDXC_BUILDLOC}
+    )
+    
+    add_library(madrona_dxcompiler SHARED IMPORTED GLOBAL)
+    add_dependencies(madrona_dxcompiler madrona_libdxc_shlib)
+    set_target_properties(madrona_dxcompiler PROPERTIES IMPORTED_LOCATION
+        ${MADRONA_LIBDXC_BUILDLOC})
+
+    if (MADRONA_WINDOWS)
+        set_target_properties(madrona_dxcompiler PROPERTIES IMPORTED_IMPLIB
+            ${MADRONA_BUNDLED_IMPLIBDXC})
+    endif()
+
+    target_include_directories(madrona_dxcompiler SYSTEM INTERFACE
+        $<BUILD_INTERFACE:${DEP_ROOT}/dxc/include/>
+    )
     
     if (MADRONA_MACOS OR MADRONA_IOS)
         set(MOLTENVK_DYLIB_NAME "libMoltenVK.dylib")
