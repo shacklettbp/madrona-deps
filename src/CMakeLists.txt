@@ -26,7 +26,7 @@ if (MADRONA_LINUX)
 
     set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/x86_64-pc-linux-gnu/libc++.a")
 elseif (MADRONA_MACOS)
-    set(TOOLCHAIN_OS "macos")
+    set(TOOLCHAIN_OS "mac")
     set(TOOLCHAIN_HASH "${TOOLCHAIN_MACOS_HASH}")
 
     set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/libc++.a")
@@ -43,11 +43,15 @@ if (NOT MADRONA_WINDOWS) #FIX
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
     )
+    FetchContent_MakeAvailable(madrona_toolchain)
+    set(TOOLCHAIN_PATH "${madrona_toolchain_SOURCE_DIR}/toolchain")
 
-    set(TOOLCHAIN_C_COMPILER "${CMAKE_C_COMPILER}")
-    set(TOOLCHAIN_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+    if (MADRONA_MACOS)
+        file(GLOB TOOLCHAIN_PATH "${TOOLCHAIN_PATH}/Toolchains/LLVM*.xctoolchain/usr")
+    endif()
 
-    set(TOOLCHAIN_PATH "")
+    set(TOOLCHAIN_C_COMPILER "${TOOLCHAIN_PATH}/bin/clang")
+    set(TOOLCHAIN_CXX_COMPILER "${TOOLCHAIN_PATH}/bin/clang++")
 else ()
     set(TOOLCHAIN_C_COMPILER "${CMAKE_C_COMPILER}")
     set(TOOLCHAIN_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
