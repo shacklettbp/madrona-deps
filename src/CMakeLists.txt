@@ -3,6 +3,7 @@ cmake_policy(VERSION 3.18)
 
 if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+    list(JOIN CMAKE_OSX_ARCHITECTURES "$<SEMICOLON>" EXT_OSX_ARCHITECTURES)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.2")
 endif()
 
@@ -20,12 +21,59 @@ find_package(Python 3.6 COMPONENTS Interpreter)
 include(versions.cmake)
 
 if (MADRONA_LINUX)
+    set(TOOLCHAIN_OS "linux")
+    set(TOOLCHAIN_HASH "${TOOLCHAIN_LINUX_HASH}")
+
+    set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/x86_64-pc-linux-gnu/libc++.a")
+elseif (MADRONA_MACOS)
+    set(TOOLCHAIN_OS "macos")
+    set(TOOLCHAIN_HASH "${TOOLCHAIN_MACOS_HASH}")
+
+    set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/libc++.a")
+elseif (MADRONA_WINDOWS)
+    set(TOOLCHAIN_OS "windows")
+    set(TOOLCHAIN_HASH "${TOOLCHAIN_WINDOWS_HASH}")
+endif ()
+
+if (NOT MADRONA_WINDOWS) #FIX
+    FetchContent_Declare(madrona_toolchain
+        URL "https://github.com/shacklettbp/madrona-toolchain/releases/download/${TOOLCHAIN_VERSION}/madrona-toolchain-${TOOLCHAIN_VERSION}-${TOOLCHAIN_OS}.tar.xz"
+        URL_HASH SHA256=${TOOLCHAIN_HASH}
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+    )
+
+    set(TOOLCHAIN_C_COMPILER "${CMAKE_C_COMPILER}")
+    set(TOOLCHAIN_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+
+    set(TOOLCHAIN_PATH "")
+else ()
+    set(TOOLCHAIN_C_COMPILER "${CMAKE_C_COMPILER}")
+    set(TOOLCHAIN_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+endif()
+
+if (MADRONA_LINUX)
+    if (MADRONA_X64)
+        set(TOOLCHAIN_STATIC_CXX_LINKER_FLAGS
+            "-nostdlib++ ${TOOLCHAIN_PATH}/lib/x86_64-pc-linux-gnu/libc++.a")
+    else ()
+        message(FATAL_ERROR "ARM Linux deps not supported")
+    endif ()
+elseif (MADRONA_MACOS)
+    set(TOOLCHAIN_STATIC_CXX_LINKER_FLAGS
+        "-nostdlib++ ${TOOLCHAIN_PATH}/lib/libc++.a")
+elseif (MADRONA_WINDOWS)
+    set(TOOLCHAIN_STATIC_CXX_LINKER_FLAGS "")
+endif ()
+
+if (MADRONA_LINUX)
     set (SDL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/SDL")
     set (SDL_INSTALL "${SDL_PREFIX}/install")
     
     list(APPEND SDL_ARGS
-        "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-        "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+        "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
+        "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
         "-DCMAKE_INSTALL_PREFIX=${SDL_INSTALL}"
         "-DCMAKE_BUILD_TYPE=Release"
         "-DSDL_SHARED=ON"
@@ -66,8 +114,8 @@ set (VK_HDRS_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_hdrs")
 set (VK_HDRS_INSTALL "${VK_HDRS_PREFIX}/install")
 
 list(APPEND VK_HDRS_ARGS
-    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
     "-DCMAKE_INSTALL_PREFIX=${VK_HDRS_INSTALL}"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_CONFIGURATION_TYPES=Release"
@@ -97,8 +145,8 @@ set(VK_LOADER_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_loader")
 set(VK_LOADER_INSTALL "${VK_LOADER_PREFIX}/install")
 
 list(APPEND VK_LOADER_ARGS
-    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
     "-DCMAKE_INSTALL_PREFIX=${VK_LOADER_INSTALL}"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_CONFIGURATION_TYPES=Release"
@@ -199,5 +247,83 @@ if (MADRONA_MACOS)
     install(DIRECTORY "${metal_cpp_ext_dir}/MetalKit"
         DESTINATION metal-cpp-extensions/include
     )
-
 endif ()
+
+set(DXC_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dxc")
+set(DXC_SRC "${DXC_PREFIX}/src")
+set(DXC_BUILD "${DXC_PREFIX}/build")
+set(DXC_INSTALL "${DXC_PREFIX}/install")
+
+list(APPEND DXC_CMAKE_ARGS
+    "-DCMAKE_INSTALL_PREFIX=${DXC_INSTALL}"
+    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
+    "-DCMAKE_CONFIGURATION_TYPES=Release"
+    "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_OSX_ARCHITECTURES=${EXT_OSX_ARCHITECTURES}"
+    "-DCMAKE_EXE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+    "-DCMAKE_SHARED_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+    "-DCMAKE_MODULE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+    "-DLLVM_ENABLE_ZLIB=OFF"
+    "-DENABLE_SPIRV_CODEGEN=ON"
+    "-C ${DXC_SRC}/cmake/caches/PredefinedParams.cmake"
+)
+
+if (MADRONA_MACOS)
+    # There is an annoying issue here: llvm-ar does not work with universal
+    # binaries, because of this CMake uses system ar by default on macos.
+    # However, it still tries to use llvm-ranlib by default, which then
+    # breaks universal binaries. One option is to force system ranlib on macos
+    # The better option is to do what LLVM itself does, which is to just use
+    # libtool on macos for building static libraries since it is more
+    # optimized anyway: https://reviews.llvm.org/D19611. llvm-libtool
+    # correctly handles universal binaries
+    list(APPEND DXC_CMAKE_ARGS
+        "-DCMAKE_CXX_CREATE_STATIC_LIBRARY=\"${TOOLCHAIN_PATH}/bin/llvm-libtool-darwin\" -static -no_warning_for_no_symbols -o <TARGET> <LINK_FLAGS> <OBJECTS>"
+        "-DCMAKE_RANLIB=\"\""
+    )
+endif()
+
+ExternalProject_Add(dxc
+    GIT_REPOSITORY https://github.com/microsoft/DirectXShaderCompiler.git
+    GIT_TAG "${DXC_VERSION}"
+    PREFIX "${DXC_PREFIX}"
+    SOURCE_DIR "${DXC_SRC}"
+    STAMP_DIR "${DXC_PREFIX}/stamps"
+    BINARY_DIR "${DXC_BUILD}"
+    INSTALL_DIR "${DXC_INSTALL}"
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    CMAKE_GENERATOR Ninja
+    INSTALL_COMMAND ninja -C "${DXC_BUILD}" install-distribution
+    CMAKE_ARGS ${DXC_CMAKE_ARGS}
+)
+
+if (MADRONA_WINDOWS)
+    find_package(Python 3.9 COMPONENTS Interpreter REQUIRED)
+
+    ExternalProject_Add_Step(dxc download_taef
+        COMMAND ${CMAKE_COMMAND} -E env HLSL_SRC_DIR=${DXC_SRC} ${Python_EXECUTABLE} "${DXC_SRC}/utils/hct/hctgettaef.py"
+        DEPENDEES download update patch
+        DEPENDERS configure
+    )
+
+    # For some reason dxcompiler.lib is left out of install-distribution
+    install(FILES ${DXC_BUILD}/lib/dxcompiler.lib
+        DESTINATION dxc/lib/
+    )
+else ()
+    install(DIRECTORY ${DXC_INSTALL}/lib
+        DESTINATION dxc/
+        USE_SOURCE_PERMISSIONS
+    )
+endif ()
+
+install(DIRECTORY ${DXC_INSTALL}/include
+    DESTINATION dxc/
+    USE_SOURCE_PERMISSIONS
+)
+
+install(DIRECTORY ${DXC_INSTALL}/bin
+    DESTINATION dxc/
+    USE_SOURCE_PERMISSIONS
+)
