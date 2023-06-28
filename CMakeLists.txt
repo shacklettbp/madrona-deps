@@ -58,6 +58,13 @@ if (MADRONA_USE_BUNDLED)
 
     set(DEP_ROOT ${madronaprecompileddeps_SOURCE_DIR})
 
+    get_property(MULTI_CFG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if (MULTI_CFG)
+        set(BUNDLED_LIB_OUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<CONFIG>")
+    else ()
+        set(BUNDLED_LIB_OUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+    endif ()
+
     if (MADRONA_LINUX)
         find_package(SDL2
             PATHS "${DEP_ROOT}/SDL"
@@ -84,7 +91,7 @@ if (MADRONA_USE_BUNDLED)
     endif()
 
     cmake_path(GET vk_loader_src_loc FILENAME vk_loader_name)
-    set(MADRONA_BUNDLED_VK_LOADER "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${vk_loader_name}")
+    set(MADRONA_BUNDLED_VK_LOADER "${BUNDLED_LIB_OUT_DIR}/vk/${vk_loader_name}")
 
     add_custom_command(
         OUTPUT ${MADRONA_BUNDLED_VK_LOADER}
@@ -126,7 +133,8 @@ if (MADRONA_USE_BUNDLED)
     endif()
     
     cmake_path(GET MADRONA_BUNDLED_LIBDXC FILENAME MADRONA_LIBDXC_NAME)
-    set(MADRONA_LIBDXC_BUILDLOC "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${MADRONA_LIBDXC_NAME}")
+
+    set(MADRONA_LIBDXC_BUILDLOC "${BUNDLED_LIB_OUT_DIR}/${MADRONA_LIBDXC_NAME}")
     
     add_custom_command(
         OUTPUT ${MADRONA_LIBDXC_BUILDLOC}
@@ -155,7 +163,7 @@ if (MADRONA_USE_BUNDLED)
     if (MADRONA_MACOS OR MADRONA_IOS)
         set(MOLTENVK_DYLIB_NAME "libMoltenVK.dylib")
         set(MOLTENVK_SRC_LOC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_DYLIB_NAME}")
-        set(MOLTENVK_BUNDLED_LIB "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${MOLTENVK_DYLIB_NAME}")
+        set(MOLTENVK_BUNDLED_LIB "${BUNDLED_LIB_OUT_DIR}/vk/${MOLTENVK_DYLIB_NAME}")
         add_custom_command(
             OUTPUT "${MOLTENVK_BUNDLED_LIB}"
             DEPENDS "${MOLTENVK_SRC_LOC}"
@@ -164,7 +172,7 @@ if (MADRONA_USE_BUNDLED)
 
         set(MOLTENVK_ICD_NAME "MoltenVK_icd.json")
         set(MOLTENVK_ICD_SRC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_ICD_NAME}")
-        set(MOLTENVK_ICD_DST "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/vk/${MOLTENVK_ICD_NAME}")
+        set(MOLTENVK_ICD_DST "${BUNDLED_LIB_OUT_DIR}/vk/${MOLTENVK_ICD_NAME}")
         add_custom_command(
             OUTPUT "${MOLTENVK_ICD_DST}"
             DEPENDS "${MOLTENVK_ICD_SRC}"
@@ -188,7 +196,7 @@ if (MADRONA_USE_BUNDLED)
             "${DEP_ROOT}/metal-cpp-extensions/include"
         )
     endif ()
-else()
+else() # FIXME: The non-bundled path is not currently maintained, will not work.
     if (MADRONA_LINUX)
         find_package(SDL2 REQUIRED)
     endif()
