@@ -52,6 +52,8 @@ if (MADRONA_USE_BUNDLED)
         DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/download"
         DOWNLOAD_NAME cur.tar # Can't name it .tar.xz or CMake will ignore
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bundled-deps"
+        STAMP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/download/timestamps"
     )
 
     FetchContent_MakeAvailable(MadronaPrecompiledDeps)
