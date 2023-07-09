@@ -46,6 +46,7 @@ if (MADRONA_USE_BUNDLED)
 
     set(DEPS_URL "https://github.com/shacklettbp/madrona-deps/releases/download/${MADRONA_DEPS_VERSION}/madrona-deps-${MADRONA_DEPS_VERSION}-${DEPS_OS_NAME}.tar.xz")
 
+    set(FETCHCONTENT_QUIET FALSE)
     FetchContent_Declare(MadronaPrecompiledDeps
         URL ${DEPS_URL}
         URL_HASH SHA256=${MADRONA_DEPS_HASH}
