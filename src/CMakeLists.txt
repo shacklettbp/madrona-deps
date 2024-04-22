@@ -26,7 +26,7 @@ if (MADRONA_LINUX)
 
     set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/x86_64-pc-linux-gnu/libc++.a")
 elseif (MADRONA_MACOS)
-    set(TOOLCHAIN_OS "mac")
+    set(TOOLCHAIN_OS "macos")
     set(TOOLCHAIN_HASH "${TOOLCHAIN_MACOS_HASH}")
 
     set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/libc++.a")
