@@ -36,8 +36,13 @@ elseif (MADRONA_WINDOWS)
 endif ()
 
 if (NOT MADRONA_WINDOWS) #FIX
+    execute_process(COMMAND uname -m
+        OUTPUT_VARIABLE TOOLCHAIN_ARCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
     FetchContent_Declare(madrona_toolchain
-        URL "https://github.com/shacklettbp/madrona-toolchain/releases/download/${TOOLCHAIN_VERSION}/madrona-toolchain-${TOOLCHAIN_VERSION}-${TOOLCHAIN_OS}.tar.xz"
+        URL "https://github.com/shacklettbp/madrona-toolchain/releases/download/${TOOLCHAIN_VERSION}/madrona-toolchain-${TOOLCHAIN_VERSION}-${TOOLCHAIN_OS}-${TOOLCHAIN_ARCH}.tar.xz"
         URL_HASH SHA256=${TOOLCHAIN_HASH}
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         CONFIGURE_COMMAND ""
@@ -135,7 +140,7 @@ endif()
 
 ExternalProject_Add(VulkanHeaders
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG sdk-${VULKAN_HEADER_VERSION}
+    GIT_TAG vulkan-sdk-${VULKAN_HEADER_VERSION}
     PREFIX "${VK_HDRS_PREFIX}"
     INSTALL_DIR "${VK_HDRS_INSTALL}"
     CMAKE_ARGS ${VK_HDRS_ARGS}
@@ -168,7 +173,7 @@ endif()
 
 ExternalProject_Add(VulkanLoader
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Loader.git
-    GIT_TAG sdk-${VULKAN_LOADER_VERSION}
+    GIT_TAG vulkan-sdk-${VULKAN_LOADER_VERSION}
     PREFIX "${VK_LOADER_PREFIX}"
     INSTALL_DIR "${VK_LOADER_INSTALL}"
     CMAKE_ARGS ${VK_LOADER_ARGS}
