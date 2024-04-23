@@ -212,7 +212,7 @@ if (MADRONA_MACOS)
         INSTALL_COMMAND ""
     )
 
-    install(DIRECTORY ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/dylib/macOS/
+    install(DIRECTORY ${MOLTENVK_PREFIX}/repo/Package/Release/MoltenVK/dynamic/dylib/macOS/
         DESTINATION moltenvk/lib/
     )
 
