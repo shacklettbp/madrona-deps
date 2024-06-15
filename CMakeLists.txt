@@ -75,6 +75,13 @@ if (MADRONA_USE_BUNDLED)
             REQUIRED
             NO_DEFAULT_PATH
         )
+
+        find_package(embree
+            PATHS "${DEP_ROOT}/embree"
+            QUIET
+            REQUIRED
+            NO_DEFAULT_PATH
+        )
     endif()
 
     if (MADRONA_WINDOWS)
@@ -202,6 +209,7 @@ if (MADRONA_USE_BUNDLED)
 else() # FIXME: The non-bundled path is not currently maintained, will not work.
     if (MADRONA_LINUX)
         find_package(SDL2 REQUIRED)
+        find_package(embree REQUIRED)
     endif()
 
     if (MADRONA_LINUX OR MADRONA_WINDOWS)
@@ -242,6 +250,11 @@ if (MADRONA_LINUX)
     add_library(madrona_sdl2 INTERFACE)
     target_link_libraries(madrona_sdl2
         INTERFACE SDL2::SDL2
+    )
+
+    add_library(madrona_embree INTERFACE)
+    target_link_libraries(madrona_embree
+        INTERFACE embree
     )
 endif()
 

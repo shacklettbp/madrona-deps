@@ -117,6 +117,44 @@ if (MADRONA_LINUX)
             PATTERN *
             PATTERN *pkgconfig* EXCLUDE
     )
+
+    set(EMBREE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/embree")
+    set(EMBREE_INSTALL "${EMBREE_PREFIX}/install")
+
+    list(APPEND EMBREE_ARGS
+        "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
+        "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
+        "-DCMAKE_EXE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+        "-DCMAKE_SHARED_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+        "-DCMAKE_MODULE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+        "-DCMAKE_INSTALL_PREFIX=${EMBREE_INSTALL}"
+        "-DCMAKE_CONFIGURATION_TYPES=Release"
+        "-DCMAKE_BUILD_TYPE=Release"
+        "-DEMBREE_TUTORIALS=OFF"
+        "-DEMBREE_MAX_ISA=SSE2"
+        "-DEMBREE_TASKING_SYSTEM=INTERNAL"
+    )
+
+    ExternalProject_Add(embree
+        GIT_REPOSITORY https://github.com/RenderKit/embree.git
+        GIT_TAG "${EMBREE_VERSION}"
+        GIT_SHALLOW ON
+        PREFIX "${EMBREE_PREFIX}"
+        INSTALL_DIR "${EMBREE_INSTALL}"
+        CMAKE_ARGS ${EMBREE_ARGS}
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+
+    install(DIRECTORY "${EMBREE_INSTALL}/include/embree4"
+        DESTINATION embree/include
+    )
+    
+    install(DIRECTORY ${EMBREE_INSTALL}/lib/
+        DESTINATION embree/lib
+        FILES_MATCHING
+            PATTERN *
+            PATTERN *pkgconfig* EXCLUDE
+    )
 endif()
 
 set (VK_HDRS_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_hdrs")
