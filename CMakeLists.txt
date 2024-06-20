@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
-cmake_policy(VERSION 3.24)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+cmake_policy(VERSION 3.18)
 
 set(NAME madrona-deps)
 project(${NAME})
@@ -51,6 +51,7 @@ if (MADRONA_USE_BUNDLED)
     FetchContent_Declare(MadronaPrecompiledDeps
         URL ${DEPS_URL}
         URL_HASH SHA256=${MADRONA_DEPS_HASH}
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bundled-deps"
     )
 
