@@ -1,4 +1,3 @@
 /build
-/download/cur.tar
-/download/timestamps
 /bundled-deps
+/cmake-tmp

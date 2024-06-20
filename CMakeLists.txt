@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
-cmake_policy(VERSION 3.18)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+cmake_policy(VERSION 3.24)
 
 set(NAME madrona-deps)
 project(${NAME})
@@ -47,14 +47,11 @@ if (MADRONA_USE_BUNDLED)
     set(DEPS_URL "https://github.com/shacklettbp/madrona-deps/releases/download/${MADRONA_DEPS_VERSION}/madrona-deps-${MADRONA_DEPS_VERSION}-${DEPS_OS_NAME}.tar.xz")
 
     set(FETCHCONTENT_QUIET FALSE)
+    set(FETCHCONTENT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake-tmp")
     FetchContent_Declare(MadronaPrecompiledDeps
         URL ${DEPS_URL}
         URL_HASH SHA256=${MADRONA_DEPS_HASH}
-        DOWNLOAD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/download"
-        DOWNLOAD_NAME cur.tar # Can't name it .tar.xz or CMake will ignore
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bundled-deps"
-        STAMP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/download/timestamps"
     )
 
     FetchContent_MakeAvailable(MadronaPrecompiledDeps)
