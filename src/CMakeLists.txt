@@ -17,7 +17,6 @@ FetchContent_Declare(madrona-toolchain-cmake
 
 FetchContent_GetProperties(madrona-toolchain-cmake)
 FetchContent_Populate(madrona-toolchain-cmake)
-include(${madrona-toolchain-cmake_SOURCE_DIR}/cmake/sys-detect.cmake)
 
 if (NOT WIN32)
     include("${madrona-toolchain-cmake_SOURCE_DIR}/cmake/set_toolchain.cmake")
@@ -31,6 +30,7 @@ endif()
 
 set(NAME madrona-deps-compile)
 project(${NAME} LANGUAGES C CXX)
+include("${PARENT_DIR}/cmake/sys-detect.cmake")
 
 find_package(Python 3.6 COMPONENTS Interpreter)
 
@@ -120,6 +120,7 @@ list(APPEND EMBREE_ARGS
     "-DEMBREE_MAX_ISA=NONE"
     "-DEMBREE_STATIC_LIB=ON"
     "-DEMBREE_TASKING_SYSTEM=INTERNAL"
+    "-DEMBREE_IGNORE_CMAKE_CXX_FLAGS=OFF"
 )
 
 if (MADRONA_MACOS OR MADRONA_IOS)
@@ -132,9 +133,10 @@ endif()
 if (MADRONA_X64)
     list(APPEND EMBREE_ARGS
         "-DEMBREE_ISA_SSE2=ON"
-        "-DEMBREE_ISA_SSE42=ON"
-        "-DEMBREE_ISA_AVX=ON"
+        "-DEMBREE_ISA_SSE42=OFF"
+        "-DEMBREE_ISA_AVX=OFF"
         "-DEMBREE_ISA_AVX2=ON"
+        "-DEMBREE_ISA_AVX512=OFF"
     )
 elseif (MADRONA_ARM)
     list(APPEND EMBREE_ARGS
