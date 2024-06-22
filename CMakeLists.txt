@@ -1,4 +1,5 @@
 include(cmake/current-hashes.cmake)
+include(FetchContent)
 
 option(MADRONA_USE_BUNDLED "Use prebuilt dependency binaries" ON)
 
