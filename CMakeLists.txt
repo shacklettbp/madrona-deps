@@ -1,11 +1,3 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
-cmake_policy(VERSION 3.18)
-
-set(NAME madrona-deps)
-project(${NAME})
-
-include(FetchContent)
-include(cmake/sys-detect.cmake)
 include(cmake/current-hashes.cmake)
 
 option(MADRONA_USE_BUNDLED "Use prebuilt dependency binaries" ON)

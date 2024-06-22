@@ -1,5 +1,27 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 cmake_policy(VERSION 3.18)
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
+
+include(FetchContent)
+include(ExternalProject)
+
+get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
+
+include(versions.cmake)
+
+FetchContent_Declare(madrona-toolchain-cmake
+    GIT_REPOSITORY https://github.com/shacklettbp/madrona-toolchain.git
+    GIT_TAG ${TOOLCHAIN_VERSION}
+)
+
+FetchContent_GetProperties(madrona-toolchain-cmake)
+FetchContent_Populate(madrona-toolchain-cmake)
+include(${madrona-toolchain-cmake_SOURCE_DIR}/cmake/sys-detect.cmake)
+
+if (NOT WIN32)
+    include("${madrona-toolchain-cmake_SOURCE_DIR}/cmake/set_toolchain.cmake")
+endif()
 
 if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
@@ -8,81 +30,40 @@ if (APPLE)
 endif()
 
 set(NAME madrona-deps-compile)
-project(${NAME})
-
-include(FetchContent)
-include(ExternalProject)
-
-get_filename_component(PARENT_DIR ${CMAKE_SOURCE_DIR} DIRECTORY)
-include(${PARENT_DIR}/cmake/sys-detect.cmake)
+project(${NAME} LANGUAGES C CXX)
 
 find_package(Python 3.6 COMPONENTS Interpreter)
 
-include(versions.cmake)
-
-if (MADRONA_LINUX)
-    set(TOOLCHAIN_OS "linux")
-    set(TOOLCHAIN_HASH "${TOOLCHAIN_LINUX_HASH}")
-
-    set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/x86_64-pc-linux-gnu/libc++.a")
-elseif (MADRONA_MACOS)
-    set(TOOLCHAIN_OS "macos")
-    set(TOOLCHAIN_HASH "${TOOLCHAIN_MACOS_HASH}")
-
-    set(DXC_LINKER_FLAGS "-nostdlib++ ${TOOLCHAIN_PATH}/lib/libc++.a")
-elseif (MADRONA_WINDOWS)
-    set(TOOLCHAIN_OS "windows")
-    set(TOOLCHAIN_HASH "${TOOLCHAIN_WINDOWS_HASH}")
-endif ()
-
 if (NOT MADRONA_WINDOWS) #FIX
-    execute_process(COMMAND uname -m
-        OUTPUT_VARIABLE TOOLCHAIN_ARCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
+    FetchContent_GetProperties(MadronaBundledToolchain)
 
-    FetchContent_Declare(madrona_toolchain
-        URL "https://github.com/shacklettbp/madrona-toolchain/releases/download/${TOOLCHAIN_VERSION}/madrona-toolchain-${TOOLCHAIN_VERSION}-${TOOLCHAIN_OS}-${TOOLCHAIN_ARCH}.tar.xz"
-        URL_HASH SHA256=${TOOLCHAIN_HASH}
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-    )
-    FetchContent_MakeAvailable(madrona_toolchain)
-    set(TOOLCHAIN_PATH "${madrona_toolchain_SOURCE_DIR}/toolchain")
+    set(MADRONA_LIBCXX_PATH "${madronabundledtoolchain_SOURCE_DIR}/libcxx-madrona")
+    set(HERMETIC_LIBCXX_PATH "${madronabundledtoolchain_SOURCE_DIR}/libcxx-hermetic")
+    set(OP_NEWDEL_PATH "${madronabundledtoolchain_SOURCE_DIR}/toolchain-standalone-op-newdel/lib/libmadrona_toolchain_standalone_op_newdel.a")
 
-    if (MADRONA_MACOS)
-        file(GLOB TOOLCHAIN_PATH "${TOOLCHAIN_PATH}/Toolchains/LLVM*.xctoolchain/usr")
-    endif()
+    set(MADRONA_LIBCXX_INC_FLAGS "-nostdinc++ -isystem ${MADRONA_LIBCXX_PATH}/include/c++/v1")
+    set(MADRONA_LIBCXX_LINKER_FLAGS
+        "-nostdlib++ ${MADRONA_LIBCXX_PATH}/lib/libc++-madrona.a ${OP_NEWDEL_PATH}")
+    set(NO_LIBCXX_LINKER_FLAGS "-nostdlib++")
 
-    set(TOOLCHAIN_C_COMPILER "${TOOLCHAIN_PATH}/bin/clang")
-    set(TOOLCHAIN_CXX_COMPILER "${TOOLCHAIN_PATH}/bin/clang++")
+    set(HERMETIC_LIBCXX_INC_FLAGS "-nostdinc++ -isystem ${HERMETIC_LIBCXX_PATH}/include/c++/v1")
+    set(HERMETIC_LIBCXX_LINKER_FLAGS
+        "-nostdlib++ ${HERMETIC_LIBCXX_PATH}/lib/libc++-hermetic.a ${OP_NEWDEL_PATH}")
 else ()
-    set(TOOLCHAIN_C_COMPILER "${CMAKE_C_COMPILER}")
-    set(TOOLCHAIN_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+    set(MADRONA_LIBCXX_INC_FLAGS "")
+    set(MADRONA_LIBCXX_LINKER_FLAGS "")
+    set(NO_LIBCXX_LINKER_FLAGS "")
+    set(HERMETIC_LIBCXX_INC_FLAGS "")
+    set(HERMETIC_LIBCXX_LINKER_FLAGS "")
 endif()
-
-if (MADRONA_LINUX)
-    if (MADRONA_X64)
-        set(TOOLCHAIN_STATIC_CXX_LINKER_FLAGS
-            "-nostdlib++ ${TOOLCHAIN_PATH}/lib/x86_64-pc-linux-gnu/libc++.a")
-    else ()
-        message(FATAL_ERROR "ARM Linux deps not supported")
-    endif ()
-elseif (MADRONA_MACOS)
-    set(TOOLCHAIN_STATIC_CXX_LINKER_FLAGS
-        "-nostdlib++ ${TOOLCHAIN_PATH}/lib/libc++.a")
-elseif (MADRONA_WINDOWS)
-    set(TOOLCHAIN_STATIC_CXX_LINKER_FLAGS "")
-endif ()
 
 if (MADRONA_LINUX)
     set (SDL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/SDL")
     set (SDL_INSTALL "${SDL_PREFIX}/install")
     
     list(APPEND SDL_ARGS
-        "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
-        "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
+        "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+        "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
         "-DCMAKE_INSTALL_PREFIX=${SDL_INSTALL}"
         "-DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}"
         "-DCMAKE_BUILD_TYPE=Release"
@@ -125,11 +106,12 @@ set(EMBREE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/embree")
 set(EMBREE_INSTALL "${EMBREE_PREFIX}/install")
 
 list(APPEND EMBREE_ARGS
-    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
-    "-DCMAKE_EXE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
-    "-DCMAKE_SHARED_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
-    "-DCMAKE_MODULE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    "-DCMAKE_CXX_FLAGS=${MADRONA_LIBCXX_INC_FLAGS}"
+    "-DCMAKE_EXE_LINKER_FLAGS=${NO_LIBCXX_LINKER_FLAGS}"
+    "-DCMAKE_SHARED_LINKER_FLAGS=${NO_LIBCXX_LINKER_FLAGS}"
+    "-DCMAKE_MODULE_LINKER_FLAGS=${NO_LIBCXX_LINKER_FLAGS}"
     "-DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}"
     "-DCMAKE_INSTALL_PREFIX=${EMBREE_INSTALL}"
     "-DCMAKE_CONFIGURATION_TYPES=Release"
@@ -187,8 +169,8 @@ set (VK_HDRS_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_hdrs")
 set (VK_HDRS_INSTALL "${VK_HDRS_PREFIX}/install")
 
 list(APPEND VK_HDRS_ARGS
-    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_INSTALL_PREFIX=${VK_HDRS_INSTALL}"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_CONFIGURATION_TYPES=Release"
@@ -219,8 +201,8 @@ set(VK_LOADER_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_loader")
 set(VK_LOADER_INSTALL "${VK_LOADER_PREFIX}/install")
 
 list(APPEND VK_LOADER_ARGS
-    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_INSTALL_PREFIX=${VK_LOADER_INSTALL}"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_CONFIGURATION_TYPES=Release"
@@ -332,15 +314,16 @@ set(DXC_INSTALL "${DXC_PREFIX}/install")
 list(APPEND DXC_CMAKE_ARGS
     "-DCMAKE_INSTALL_PREFIX=${DXC_INSTALL}"
     "-DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}"
-    "-DCMAKE_C_COMPILER=${TOOLCHAIN_C_COMPILER}"
-    "-DCMAKE_CXX_COMPILER=${TOOLCHAIN_CXX_COMPILER}"
+    "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+    "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     "-DCMAKE_CONFIGURATION_TYPES=Release"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_OSX_ARCHITECTURES=${EXT_OSX_ARCHITECTURES}"
     "-DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
-    "-DCMAKE_EXE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
-    "-DCMAKE_SHARED_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
-    "-DCMAKE_MODULE_LINKER_FLAGS=${TOOLCHAIN_STATIC_CXX_LINKER_FLAGS}"
+    "-DCMAKE_CXX_FLAGS=${HERMETIC_LIBCXX_INC_FLAGS}"
+    "-DCMAKE_EXE_LINKER_FLAGS=${HERMETIC_LIBCXX_LINKER_FLAGS}"
+    "-DCMAKE_SHARED_LINKER_FLAGS=${HERMETIC_LIBCXX_LINKER_FLAGS}"
+    "-DCMAKE_MODULE_LINKER_FLAGS=${HERMETIC_LIBCXX_LINKER_FLAGS}"
     "-DLLVM_ENABLE_ZLIB=OFF"
     "-DENABLE_SPIRV_CODEGEN=ON"
     "-C ${DXC_SRC}/cmake/caches/PredefinedParams.cmake"
