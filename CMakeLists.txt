@@ -19,6 +19,13 @@ if (NOT DEFINED MADRONA_DEPS_VERSION)
     )
 endif()
 
+get_property(MULTI_CFG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (MULTI_CFG)
+    set(DEP_LIB_OUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<CONFIG>")
+else ()
+    set(DEP_LIB_OUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+endif ()
+
 if (MADRONA_USE_BUNDLED)
     if (MADRONA_LINUX)
         set(DEPS_OS_NAME "linux")
@@ -52,13 +59,6 @@ if (MADRONA_USE_BUNDLED)
 
     set(DEP_ROOT ${madronaprecompileddeps_SOURCE_DIR})
 
-    get_property(MULTI_CFG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-    if (MULTI_CFG)
-        set(BUNDLED_LIB_OUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/$<CONFIG>")
-    else ()
-        set(BUNDLED_LIB_OUT_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-    endif ()
-
     if (MADRONA_LINUX)
         find_package(SDL2
             PATHS "${DEP_ROOT}/SDL"
@@ -66,14 +66,16 @@ if (MADRONA_USE_BUNDLED)
             REQUIRED
             NO_DEFAULT_PATH
         )
-
-        find_package(embree
-            PATHS "${DEP_ROOT}/embree"
-            QUIET
-            REQUIRED
-            NO_DEFAULT_PATH
-        )
     endif()
+
+    # Setup Embree
+    
+    find_package(embree
+        PATHS "${DEP_ROOT}/embree"
+        QUIET
+        REQUIRED
+        NO_DEFAULT_PATH
+    )
 
     if (MADRONA_WINDOWS)
         find_file(vk_loader_src_loc
@@ -92,7 +94,7 @@ if (MADRONA_USE_BUNDLED)
     endif()
 
     cmake_path(GET vk_loader_src_loc FILENAME vk_loader_name)
-    set(MADRONA_BUNDLED_VK_LOADER "${BUNDLED_LIB_OUT_DIR}/vk/${vk_loader_name}")
+    set(MADRONA_BUNDLED_VK_LOADER "${DEP_LIB_OUT_DIR}/vk/${vk_loader_name}")
 
     add_custom_command(
         OUTPUT ${MADRONA_BUNDLED_VK_LOADER}
@@ -135,7 +137,7 @@ if (MADRONA_USE_BUNDLED)
     
     cmake_path(GET MADRONA_BUNDLED_LIBDXC FILENAME MADRONA_LIBDXC_NAME)
 
-    set(MADRONA_LIBDXC_BUILDLOC "${BUNDLED_LIB_OUT_DIR}/${MADRONA_LIBDXC_NAME}")
+    set(MADRONA_LIBDXC_BUILDLOC "${DEP_LIB_OUT_DIR}/${MADRONA_LIBDXC_NAME}")
     
     add_custom_command(
         OUTPUT ${MADRONA_LIBDXC_BUILDLOC}
@@ -160,11 +162,11 @@ if (MADRONA_USE_BUNDLED)
     target_include_directories(madrona_dxcompiler SYSTEM INTERFACE
         $<BUILD_INTERFACE:${DEP_ROOT}/dxc/include/>
     )
-    
+
     if (MADRONA_MACOS OR MADRONA_IOS)
         set(MOLTENVK_DYLIB_NAME "libMoltenVK.dylib")
         set(MOLTENVK_SRC_LOC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_DYLIB_NAME}")
-        set(MOLTENVK_BUNDLED_LIB "${BUNDLED_LIB_OUT_DIR}/vk/${MOLTENVK_DYLIB_NAME}")
+        set(MOLTENVK_BUNDLED_LIB "${DEP_LIB_OUT_DIR}/vk/${MOLTENVK_DYLIB_NAME}")
         add_custom_command(
             OUTPUT "${MOLTENVK_BUNDLED_LIB}"
             DEPENDS "${MOLTENVK_SRC_LOC}"
@@ -173,7 +175,7 @@ if (MADRONA_USE_BUNDLED)
 
         set(MOLTENVK_ICD_NAME "MoltenVK_icd.json")
         set(MOLTENVK_ICD_SRC "${DEP_ROOT}/moltenvk/lib/${MOLTENVK_ICD_NAME}")
-        set(MOLTENVK_ICD_DST "${BUNDLED_LIB_OUT_DIR}/vk/${MOLTENVK_ICD_NAME}")
+        set(MOLTENVK_ICD_DST "${DEP_LIB_OUT_DIR}/vk/${MOLTENVK_ICD_NAME}")
         add_custom_command(
             OUTPUT "${MOLTENVK_ICD_DST}"
             DEPENDS "${MOLTENVK_ICD_SRC}"
@@ -242,12 +244,33 @@ if (MADRONA_LINUX)
     target_link_libraries(madrona_sdl2
         INTERFACE SDL2::SDL2
     )
-
-    add_library(madrona_embree INTERFACE)
-    target_link_libraries(madrona_embree
-        INTERFACE embree
-    )
 endif()
+
+# Copy embree to build directory
+get_target_property(EMBREE_SRC_LOC embree IMPORTED_LOCATION_RELEASE)
+cmake_path(GET EMBREE_SRC_LOC FILENAME EMBREE_LIB_NAME)
+
+set(EMBREE_OUT_LOC "${DEP_LIB_OUT_DIR}/${EMBREE_LIB_NAME}")
+
+add_custom_command(
+    OUTPUT ${EMBREE_OUT_LOC}
+    DEPENDS ${EMBREE_SRC_LOC}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${EMBREE_SRC_LOC} ${EMBREE_OUT_LOC}
+)
+
+add_custom_target(madrona_embree_lib
+    DEPENDS ${EMBREE_OUT_LOC}
+)
+
+set_target_properties(embree PROPERTIES
+    IMPORTED_LOCATION_RELEASE ${EMBREE_OUT_LOC}
+)
+
+add_library(madrona_embree INTERFACE)
+target_link_libraries(madrona_embree
+    INTERFACE embree
+)
+add_dependencies(madrona_embree madrona_embree_lib)
 
 if (MADRONA_MACOS)
     find_library(foundation_framework
