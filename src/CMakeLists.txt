@@ -179,6 +179,14 @@ install(DIRECTORY ${EMBREE_INSTALL}/lib/
         PATTERN *pkgconfig* EXCLUDE
 )
 
+if (MADRONA_WINDOWS)
+    install(DIRECTORY ${EMBREE_INSTALL}/bin/
+        DESTINATION embree/bin
+        FILES_MATCHING
+            PATTERN *dll
+    )
+endif()
+
 set (VK_HDRS_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/vk_hdrs")
 set (VK_HDRS_INSTALL "${VK_HDRS_PREFIX}/install")
 
