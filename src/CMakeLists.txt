@@ -23,7 +23,12 @@ if (NOT WIN32)
 endif()
 
 if (APPLE)
-    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+    option(MADRONA_DEPS_MACOS_ARCH "macOS target architecture")
+    if (NOT MADRONA_DEPS_MACOS_ARCH)
+        message(FATAL_ERROR "Must specify macOS target architecture")
+    endif()
+
+    set(CMAKE_OSX_ARCHITECTURES "${MADRONA_DEPS_MACOS_ARCH}")
     list(JOIN CMAKE_OSX_ARCHITECTURES "$<SEMICOLON>" EXT_OSX_ARCHITECTURES)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
 endif()
@@ -136,9 +141,17 @@ if (MADRONA_X64)
         "-DEMBREE_ISA_AVX=ON"
         "-DEMBREE_ISA_AVX2=ON"
         "-DEMBREE_ISA_AVX512=OFF"
+        "-DEMBREE_ISA_NEON=OFF"
+        "-DEMBREE_ISA_NEON2X=OFF"
     )
 elseif (MADRONA_ARM)
     list(APPEND EMBREE_ARGS
+        "-DEMBREE_ISA_SSE2=OFF"
+        "-DEMBREE_ISA_SSE42=OFF"
+        "-DEMBREE_ISA_AVX=OFF"
+        "-DEMBREE_ISA_AVX2=OFF"
+        "-DEMBREE_ISA_AVX512=OFF"
+        # Double pumped NEON
         "-DEMBREE_ISA_NEON=OFF"
         "-DEMBREE_ISA_NEON2X=ON"
     )
@@ -331,6 +344,8 @@ list(APPEND DXC_CMAKE_ARGS
 )
 
 if (MADRONA_MACOS)
+    cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH TOOLCHAIN_BIN_DIR)
+
     # There is an annoying issue here: llvm-ar does not work with universal
     # binaries, because of this CMake uses system ar by default on macos.
     # However, it still tries to use llvm-ranlib by default, which then
@@ -340,7 +355,7 @@ if (MADRONA_MACOS)
     # optimized anyway: https://reviews.llvm.org/D19611. llvm-libtool
     # correctly handles universal binaries
     list(APPEND DXC_CMAKE_ARGS
-        "-DCMAKE_CXX_CREATE_STATIC_LIBRARY=\"${TOOLCHAIN_PATH}/bin/llvm-libtool-darwin\" -static -no_warning_for_no_symbols -o <TARGET> <LINK_FLAGS> <OBJECTS>"
+        "-DCMAKE_CXX_CREATE_STATIC_LIBRARY=\"${TOOLCHAIN_BIN_DIR}/llvm-libtool-darwin\" -static -no_warning_for_no_symbols -o <TARGET> <LINK_FLAGS> <OBJECTS>"
         "-DCMAKE_RANLIB=\"\""
     )
 endif()
