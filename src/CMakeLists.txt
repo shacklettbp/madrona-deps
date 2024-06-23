@@ -28,9 +28,9 @@ if (APPLE)
         message(FATAL_ERROR "Must specify macOS target architecture")
     endif()
 
-    set(CMAKE_OSX_ARCHITECTURES "${MADRONA_DEPS_MACOS_ARCH}")
+    set(CMAKE_OSX_ARCHITECTURES "${MADRONA_DEPS_MACOS_ARCH}" CACHE STRING "")
     list(JOIN CMAKE_OSX_ARCHITECTURES "$<SEMICOLON>" EXT_OSX_ARCHITECTURES)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
 endif()
 
 set(NAME madrona-deps-compile)
